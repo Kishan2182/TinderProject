@@ -4,15 +4,18 @@ const app = express();
 const PORT = 3000;
 const User = require("./model/user");
 
+app.use(express.json());
+
 
 app.post("/signup", async (req, res) => {
-  const user = new User({
-    fistName: "virendra",
-    lastName: "sehwag",
-    emailId: "sehwag@test.com",
-    age: 40,
-  });
-
+  // const user = new User({
+  //   fistName: "virendra",
+  //   lastName: "sehwag",
+  //   emailId: "sehwag@test.com",
+  //   age: 40,
+  // });
+ console.log(req.body);
+ const user = new User(req.body)
   try {
     await user.save();
     console.log("User created Successfully");
