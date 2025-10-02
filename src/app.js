@@ -3,36 +3,77 @@ const connectDB = require("./config/database");
 const app = express();
 const PORT = 3000;
 const User = require("./model/user");
+const bcrypt = require("bcrypt");
+const { validateSignUpData } = require("./utils/validation");
+const validator = require("validator");
 
 app.use(express.json());
 
 app.post("/signup", async (req, res) => {
-  console.log(req.body);
-  const user = new User(req.body);
   try {
-    const ALLOWED_UPDATES = [
-      "firstName",
-      "lastName",
-      "emailId",
-      "password",
-      "age",
-      "gender",
-      "photoUrl",
-      "about",
-      "skills",
-    ];
-    const isUpdateAllowed = Object.keys(req.body).every((key) =>
-      ALLOWED_UPDATES.includes(key)
-    );
-    if (!isUpdateAllowed) {
-      throw new Error("Additional fields are present in request");
-    }
+    console.log(req.body);
+    //validation
+    validateSignUpData(req);
+
+    const {
+      firstName,
+      lastName,
+      emailId,
+      password,
+      age,
+      gender,
+      photoUrl,
+      about,
+      skills,
+    } = req.body;
+
+    //Encryptiom
+    const encryptedPassword = await bcrypt.hash(password, 10);
+
+    const user = new User({
+      firstName,
+      lastName,
+      emailId,
+      password: encryptedPassword,
+      age,
+      gender,
+      photoUrl,
+      about,
+      skills,
+    });
+
+    console.log(user);
     await user.save();
     console.log("User created Successfully");
     res.send("User created Successfully");
   } catch (error) {
     console.log("error" + error.message);
-    res.send("Error creating user " + error.message);
+    res.send("Error: " + error.message);
+  }
+});
+
+app.post("/login", async (req, res) => {
+  try {
+    const { emailId, password } = req.body;
+    console.log(emailId + " " + password);
+
+    if (emailId && !validator.isEmail(emailId)) {
+      throw new Error("Invalid Email Id");
+    }
+
+    const user = await User.findOne({ emailId: emailId });
+
+    if (!user) {
+      throw new Error("Invalid Credential");
+    }
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      throw new Error("Invalid Credential");
+    } else {
+      res.send("Login Successfull!!!");
+    }
+  } catch (error) {
+    res.send("Error : " + error.message);
   }
 });
 
@@ -84,15 +125,7 @@ app.patch("/user/:userId", async (req, res) => {
   console.log(data);
 
   try {
-    const ALLOWED_UPDATES = [
-      "firstName",
-      "lastName",
-      "age",
-      "gender",
-      "photoUrl",
-      "about",
-      "skills",
-    ];
+    const ALLOWED_UPDATES = ["age", "gender", "photoUrl", "about", "skills"];
     const isUpdateAllowed = Object.keys(data).every((key) =>
       ALLOWED_UPDATES.includes(key)
     );
