@@ -7,21 +7,32 @@ const User = require("./model/user");
 app.use(express.json());
 
 app.post("/signup", async (req, res) => {
-  // const user = new User({
-  //   fistName: "virendra",
-  //   lastName: "sehwag",
-  //   emailId: "sehwag@test.com",
-  //   age: 40,
-  // });
   console.log(req.body);
   const user = new User(req.body);
   try {
+    const ALLOWED_UPDATES = [
+      "firstName",
+      "lastName",
+      "emailId",
+      "password",
+      "age",
+      "gender",
+      "photoUrl",
+      "about",
+      "skills",
+    ];
+    const isUpdateAllowed = Object.keys(req.body).every((key) =>
+      ALLOWED_UPDATES.includes(key)
+    );
+    if (!isUpdateAllowed) {
+      throw new Error("Additional fields are present in request");
+    }
     await user.save();
     console.log("User created Successfully");
     res.send("User created Successfully");
   } catch (error) {
     console.log("error" + error.message);
-    res.send("error creating user" + error.message);
+    res.send("Error creating user " + error.message);
   }
 });
 
@@ -66,26 +77,42 @@ app.delete("/user", async (req, res) => {
   }
 });
 
-app.patch("/user", async (req, res) => {
-  const userId = req.body.userId;
+app.patch("/user/:userId", async (req, res) => {
+  const userId = req.params.userId;
   console.log(userId);
   const data = req.body;
   console.log(data);
+
   try {
+    const ALLOWED_UPDATES = [
+      "firstName",
+      "lastName",
+      "age",
+      "gender",
+      "photoUrl",
+      "about",
+      "skills",
+    ];
+    const isUpdateAllowed = Object.keys(data).every((key) =>
+      ALLOWED_UPDATES.includes(key)
+    );
+
+    if (!isUpdateAllowed) {
+      throw new Error("Update not Allowed ");
+    }
+
+    if (req.body?.skills?.length > 10) {
+      throw new Error("only upto 10 skills are allowed");
+    }
+
     const user = await User.findByIdAndUpdate(userId, data, {
       returnDocument: "after",
       runValidators: true,
     });
-
-    // const user = await User.findOneAndUpdate(
-    //   { emailId: email },
-    //   { fistName: fistName },
-    //   { returnDocument: "after" }
-    // );
     console.log(user);
     res.send("User updated Successfully");
   } catch (error) {
-    res.status(500).send("Something went wrong" + error.message);
+    res.status(500).send("Something went wrong: " + error.message);
   }
 });
 
